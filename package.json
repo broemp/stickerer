@@ -1,0 +1,20 @@
+{
+	"name": "tweet-sticker",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"start": "node build"
+	},
+	"devDependencies": {
+		"@sveltejs/adapter-node": "^5.5.8",
+		"@sveltejs/kit": "^2.70.4",
+		"@sveltejs/vite-plugin-svelte": "^5.1.1",
+		"svelte": "^5.57.3",
+		"vite": "^6.4.6"
+	},
+	"packageManager": "pnpm@11.25.0"
+}
