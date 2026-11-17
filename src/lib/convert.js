@@ -1,5 +1,5 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { toBlobURL } from '@ffmpeg/util';
 
 const MAX_BYTES = 500 * 1024; // WhatsApp animated sticker limit
 const MAX_SECONDS = 10;
@@ -33,6 +33,26 @@ export async function resolveTweet(url) {
 	return { author: data.tweet.author?.screen_name, text: data.tweet.text, media };
 }
 
+/**
+ * Downloads the video. Safari can reuse a cached non-CORS response (e.g. from a previous
+ * <video>/<img> load of the same URL) and then fail the CORS check, so bypass the HTTP cache and
+ * retry once with a cache-busting query before giving up.
+ */
+async function download(url) {
+	const opts = { cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', mode: 'cors' };
+	let lastErr;
+	for (const u of [url, `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`]) {
+		try {
+			const res = await fetch(u, opts);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			return new Uint8Array(await res.arrayBuffer());
+		} catch (e) {
+			lastErr = e;
+		}
+	}
+	throw new Error(`Video download failed: ${lastErr?.message ?? lastErr}`);
+}
+
 let ffmpegPromise;
 
 /** Loads ffmpeg.wasm once (single-threaded core: no special COOP/COEP headers needed). */
@@ -59,9 +79,7 @@ export async function convertToSticker(videoUrl, fit = 'contain', onStatus = () 
 	const ff = await getFFmpeg();
 
 	onStatus('Downloading video…');
-	const input = await fetchFile(videoUrl).catch(() => {
-		throw new Error('Video download failed (blocked by the browser or network).');
-	});
+	const input = await download(videoUrl);
 	await ff.writeFile('in.mp4', input);
 
 	const scale =
