@@ -70,6 +70,13 @@
 		<label><input type="radio" bind:group={fit} value="cover" /><span>Fill · cropped</span></label>
 	</div>
 
+	{#if loading}
+		<div class="loader" role="status" aria-live="polite">
+			<span class="cat" aria-hidden="true">🐱</span>
+			<span class="status">{loading}</span>
+		</div>
+	{/if}
+
 	{#if err}<p class="err">{err}</p>{/if}
 	{#if note}<p class="note">{note}</p>{/if}
 
@@ -260,6 +267,18 @@
 	.size { font-size: 13px; color: var(--muted); margin: 16px 0 12px; }
 	.size.bad { color: #ffb347; }
 	.btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+	.loader { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 28px 0 4px; }
+	.cat {
+		font-size: 56px;
+		line-height: 1;
+		display: inline-block;
+		animation: spin 0.9s linear infinite, bob 0.9s ease-in-out infinite;
+		filter: drop-shadow(0 6px 8px #0008);
+	}
+	.status { color: var(--muted); font-size: 14px; }
+	@keyframes spin { to { rotate: 360deg; } }
+	@keyframes bob { 50% { translate: 0 -8px; } }
+
 	footer { margin-top: 48px; text-align: center; font-size: 13px; }
 	footer a { color: var(--muted); text-decoration: none; }
 	footer a:hover { color: var(--green); text-decoration: underline; }
@@ -267,5 +286,6 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.card, img, button, .btn { transition: none; animation: none; }
+		.cat { animation: bob 1.8s ease-in-out infinite; }
 	}
 </style>
