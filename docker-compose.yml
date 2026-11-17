@@ -6,11 +6,7 @@ services:
     build: .
     container_name: stickerer
     ports:
-      - "${PORT:-3000}:3000"
-    # Behind an HTTPS reverse proxy, set the public URL (SvelteKit rejects POSTs otherwise):
-    # environment:
-    #   ORIGIN: https://stickers.example.com
-    # Converted stickers are cached in /tmp; keep the container filesystem read-only otherwise.
+      - "${PORT:-3000}:8080"
     read_only: true
     tmpfs:
       - /tmp

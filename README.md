@@ -1,15 +1,21 @@
 # Stickerer
 
 Turn a tweet's video or GIF into an animated WhatsApp sticker. Paste a tweet link, pick how the
-video should fit the square, and download the 512×512 animated WebP (or drag it straight into
-WhatsApp Web).
+video should fit the square, and download the 512×512 animated WebP (or drag it into WhatsApp Web,
+or use Share on mobile).
 
-- Converts to 512×512 animated WebP, max 10 s
+**Everything runs in your browser.** There is no backend: the page looks up the tweet through the
+[fxtwitter](https://github.com/FixTweet/FxTwitter) API, downloads the video from Twitter's CDN and
+converts it locally with [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm). Nothing is
+uploaded to a server of ours, and nothing is stored.
+
+- 512×512 animated WebP, max 10 s
 - Automatically lowers fps/quality until the file fits WhatsApp's 500 KB limit
-- `contain` (letterbox, transparent padding) or `cover` (crop) fit modes
-- SvelteKit + `adapter-node`; `ffmpeg` and `img2webp` do the encoding
+- Fit (letterboxed, transparent padding) or fill (cropped) modes
 
-## Run with Docker Compose
+## Host it
+
+It's a static site (SvelteKit + `adapter-static`), so any static host works. With Docker Compose:
 
 ```sh
 git clone https://github.com/broemp/stickerer.git
@@ -17,37 +23,25 @@ cd stickerer
 docker compose up -d
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. Change the port with `PORT=8080 docker compose up -d` or a `.env` file.
 
-By default this pulls `ghcr.io/broemp/stickerer:main`. To build from source instead, run
-`docker compose up -d --build` after removing the `image:` line in `docker-compose.yml`.
+By default this pulls `ghcr.io/broemp/stickerer:main`. To build from source instead, remove the
+`image:` line in `docker-compose.yml` and run `docker compose up -d --build`.
 
-### Configuration
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `PORT` | `3000` | Host port to publish |
-
-`PORT` can go in a `.env` file next to `docker-compose.yml`. When serving behind a reverse proxy over
-HTTPS, uncomment the `environment:` block in `docker-compose.yml` and set `ORIGIN` to your public URL
-(e.g. `https://stickers.example.com`), otherwise SvelteKit rejects POST requests.
+Without Docker: `pnpm install && pnpm build`, then serve the `build/` directory with anything
+(make sure `.wasm` is served as `application/wasm`).
 
 ## Local development
-
-Requires Node 24, pnpm, `ffmpeg` and `webp` (for `img2webp`) on your `PATH`.
 
 ```sh
 pnpm install
 pnpm dev
 ```
 
-Production build: `pnpm build && pnpm start`.
+The ffmpeg core (~30 MB wasm) is copied from `node_modules` into `static/ffmpeg/` automatically
+before `dev` and `build`, and is loaded only when you make your first sticker.
 
-## How it works
+## Limitations
 
-1. `/api/resolve` looks up the tweet via the fxtwitter API and returns its video variants.
-2. `/api/convert` downloads the video and encodes it with ffmpeg + `img2webp`, retrying with cheaper
-   settings until it is under 500 KB.
-3. `/api/file/[id]` serves the result; `/api/copy` supports copying the file to the clipboard.
-
-Results are cached in the system temp directory (`/tmp/tweet-sticker`).
+- Conversion happens on your device, so long or large videos are slower on phones.
+- Depends on the public fxtwitter API and on Twitter's video CDN allowing cross-origin downloads.

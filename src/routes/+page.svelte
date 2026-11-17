@@ -1,33 +1,33 @@
 <script>
+	import { resolveTweet, convertToSticker } from '$lib/convert.js';
+
 	let link = $state('');
 	let fit = $state('contain');
 	let loading = $state('');
 	let err = $state('');
 	let info = $state(null);
-	let stickers = $state({}); // media index -> {id,size,fits}
+	let stickers = $state({}); // media index -> {url,blob,size,fits}
 	let note = $state('');
 
-	async function post(path, body) {
-		const r = await fetch(path, {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(body)
-		});
-		if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message ?? r.statusText);
-		return r.json();
+	const canShare = typeof navigator !== 'undefined' && !!navigator.canShare;
+
+	function clear() {
+		for (const s of Object.values(stickers)) URL.revokeObjectURL(s.url);
+		stickers = {};
 	}
 
 	async function go(e) {
 		e.preventDefault();
 		err = note = '';
 		info = null;
-		stickers = {};
+		clear();
 		loading = 'Looking up tweet…';
 		try {
-			info = await post('/api/resolve', { url: link });
+			info = await resolveTweet(link);
 			for (const [i, m] of info.media.entries()) {
-				loading = `Converting ${i + 1}/${info.media.length}…`;
-				stickers[i] = await post('/api/convert', { url: m.url, fit });
+				const prefix = info.media.length > 1 ? `${i + 1}/${info.media.length} · ` : '';
+				const { blob, size, fits } = await convertToSticker(m.url, fit, (t) => (loading = prefix + t));
+				stickers[i] = { blob, size, fits, url: URL.createObjectURL(blob) };
 			}
 		} catch (x) {
 			err = x.message;
@@ -36,22 +36,19 @@
 		}
 	}
 
-	const src = (s) => `/api/file/${s.id}`;
 	const kb = (n) => `${Math.round(n / 1024)} KB`;
+	const file = (s) => new File([s.blob], 'sticker.webp', { type: 'image/webp' });
 
 	function dragstart(e, s) {
-		const abs = location.origin + src(s);
 		e.dataTransfer.effectAllowed = 'copy';
-		e.dataTransfer.setData('DownloadURL', `image/webp:sticker.webp:${abs}`);
-		e.dataTransfer.setData('text/uri-list', abs);
+		e.dataTransfer.items.add(file(s));
 	}
 
-	async function copyFile(s) {
+	async function share(s) {
 		try {
-			await post('/api/copy', { id: s.id });
-			note = 'File copied — press ⌘V in WhatsApp Web.';
+			await navigator.share({ files: [file(s)] });
 		} catch (x) {
-			note = `Copy failed: ${x.message}`;
+			if (x.name !== 'AbortError') note = `Share failed: ${x.message}`;
 		}
 	}
 </script>
@@ -60,7 +57,7 @@
 	<header>
 		<span class="badge" aria-hidden="true">🏷️</span>
 		<h1>Tweet <span class="arrow">→</span> <em>sticker</em></h1>
-		<p class="sub">Paste a tweet with a video or GIF. Get a WhatsApp sticker. Runs locally.</p>
+		<p class="sub">Paste a tweet with a video or GIF. Get a WhatsApp sticker. Runs entirely in your browser.</p>
 	</header>
 
 	<form onsubmit={go}>
@@ -82,7 +79,7 @@
 			{#each Object.entries(stickers) as [i, s] (i)}
 				<div class="card" style="--tilt: {i % 2 ? 1.5 : -1.5}deg">
 					<img
-						src={src(s)}
+						src={s.url}
 						alt="sticker"
 						width="256"
 						height="256"
@@ -93,8 +90,8 @@
 						{kb(s.size)}{s.fits ? '' : ' — over 500 KB, WhatsApp may reject'}
 					</div>
 					<div class="btns">
-						<a class="btn" href={src(s)} download="sticker.webp">Download</a>
-						<button class="ghost" onclick={() => copyFile(s)}>Copy file</button>
+						<a class="btn" href={s.url} download="sticker.webp">Download</a>
+						{#if canShare}<button class="ghost" onclick={() => share(s)}>Share</button>{/if}
 					</div>
 					<small>or drag the sticker into WhatsApp Web</small>
 				</div>
