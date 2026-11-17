@@ -1,5 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { toBlobURL } from '@ffmpeg/util';
+import { addStickerExif } from './whatsapp.js';
 
 const MAX_BYTES = 500 * 1024; // WhatsApp animated sticker limit
 const MAX_SECONDS = 10;
@@ -104,7 +105,7 @@ export async function convertToSticker(videoUrl, fit = 'contain', onStatus = () 
 				'out.webp'
 			]);
 			if (code !== 0) throw new Error('Conversion failed.');
-			data = await ff.readFile('out.webp');
+			data = addStickerExif(await ff.readFile('out.webp'));
 			if (data.byteLength <= MAX_BYTES) break;
 		}
 		const blob = new Blob([data], { type: 'image/webp' });
