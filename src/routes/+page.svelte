@@ -1,4 +1,5 @@
 <script>
+	import { base } from '$app/paths';
 	import { resolveTweet, convertToSticker } from '$lib/convert.js';
 
 	let link = $state('');
@@ -72,7 +73,7 @@
 
 	{#if loading}
 		<div class="loader" role="status" aria-live="polite">
-			<span class="cat" aria-hidden="true">🐱</span>
+			<img src="{base}/spinning-cat.gif" alt="" width="120" height="120" draggable="false" />
 			<span class="status">{loading}</span>
 		</div>
 	{/if}
@@ -268,16 +269,9 @@
 	.size.bad { color: #ffb347; }
 	.btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 	.loader { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 28px 0 4px; }
-	.cat {
-		font-size: 56px;
-		line-height: 1;
-		display: inline-block;
-		animation: spin 0.9s linear infinite, bob 0.9s ease-in-out infinite;
-		filter: drop-shadow(0 6px 8px #0008);
-	}
+	.loader img { width: 120px; height: 120px; cursor: default; filter: none; border-radius: 0; }
+	.loader img:hover { transform: none; }
 	.status { color: var(--muted); font-size: 14px; }
-	@keyframes spin { to { rotate: 360deg; } }
-	@keyframes bob { 50% { translate: 0 -8px; } }
 
 	footer { margin-top: 48px; text-align: center; font-size: 13px; }
 	footer a { color: var(--muted); text-decoration: none; }
@@ -286,6 +280,5 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.card, img, button, .btn { transition: none; animation: none; }
-		.cat { animation: bob 1.8s ease-in-out infinite; }
 	}
 </style>
