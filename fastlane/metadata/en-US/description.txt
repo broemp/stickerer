@@ -1,0 +1,24 @@
+Turn any video or GIF from a tweet into animated WhatsApp stickers, in seconds and entirely on your iPhone.
+
+HOW IT WORKS
+• Paste a tweet link, or a direct link to a video or GIF
+• Or share a tweet to Stickerer from the share sheet in X: the app opens and starts converting right away
+• Tap "Add to WhatsApp" and your pack is ready to send
+
+MADE FOR STICKERS
+• Animated 512×512 stickers that fit WhatsApp's size limit automatically
+• Fit the whole clip with padding, or fill the frame and crop
+• Split a longer clip into 3 stickers
+• Transparent, die-cut sticker look in the app
+
+YOUR STICKER LIBRARY
+• Every sticker you make is saved on your device
+• Tap a sticker in your library to add it to a new pack
+• Long-press to remove stickers you no longer want
+
+PRIVATE BY DESIGN
+• Videos are converted on your device
+• No account, no ads, no tracking
+• Open source: github.com/broemp/stickerer
+
+Requires WhatsApp to be installed to add a pack. Stickerer is an independent app and is not affiliated with, endorsed by, or sponsored by WhatsApp or X Corp. WhatsApp and X are trademarks of their respective owners. Only convert content you have the right to use.

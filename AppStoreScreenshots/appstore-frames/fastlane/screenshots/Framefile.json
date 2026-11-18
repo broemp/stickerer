@@ -1,0 +1,19 @@
+{
+  "device_frame_version": "latest",
+  "default": {
+    "background": "../background.png",
+    "padding": 80,
+    "title_min_height": "12%",
+    "font_scale_factor": 0.07,
+    "stack_title": false,
+    "title_below_image": false,
+    "show_complete_frame": false,
+    "title": {
+      "color": "#EEF5F0",
+      "font": "../fonts/SFNSRounded.ttf"
+    }
+  },
+  "data": [
+    { "filter": "-ipad", "background": "../background-ipad.png", "padding": 120, "font_scale_factor": 0.055 }
+  ]
+}

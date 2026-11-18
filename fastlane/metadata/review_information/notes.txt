@@ -1,0 +1,10 @@
+Stickerer turns a video or GIF from a tweet into animated WhatsApp stickers.
+
+How to test (no login or account needed):
+1. Open the app and paste a public tweet link that contains a video or GIF, or a direct link to an .mp4 / .gif file, into the text field. TODO: put a stable test link here before submitting.
+2. Tap "Make sticker". The video is downloaded and converted on the device; the result appears under "Pack".
+3. "Add to WhatsApp" hands the pack to WhatsApp through WhatsApp's official sticker-pack pasteboard + whatsapp:// URL. The button is disabled when WhatsApp is not installed, so the final hand-off can only be tested on a device with WhatsApp.
+
+Share extension: in Safari or the X app, share a tweet and choose "Stickerer". The app opens via stickerer://make?url=… and starts converting.
+
+The only network requests are the tweet lookup (api.fxtwitter.com) and the video download from the URL found there. Nothing about the user is sent anywhere else.

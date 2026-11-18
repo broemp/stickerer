@@ -1,0 +1,72 @@
+name: Stickerer
+settings:
+  base:
+    DEVELOPMENT_TEAM: 9772F73CF2
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+options:
+  bundleIdPrefix: me.broe
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  SDWebImageWebPCoder:
+    url: https://github.com/SDWebImage/SDWebImageWebPCoder
+    from: 0.14.6
+  libwebp:
+    url: https://github.com/SDWebImage/libwebp-Xcode
+    from: 1.1.0
+targets:
+  Stickerer:
+    type: application
+    platform: iOS
+    sources:
+      - Stickerer
+      - path: Stickerer/spinning-cat.gif
+        buildPhase: resources
+    dependencies:
+      - package: SDWebImageWebPCoder
+      - package: libwebp
+      - target: StickererShare
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.broe.stickerer
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Stickerer
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        # Universal app: App Store validation wants every orientation on iPad (multitasking).
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+    info:
+      path: Stickerer/Info.plist
+      properties:
+        ITSAppUsesNonExemptEncryption: false   # HTTPS only: answers the export-compliance question
+        LSApplicationQueriesSchemes: [whatsapp]
+        CFBundleURLTypes:
+          - CFBundleURLName: me.broe.stickerer
+            CFBundleURLSchemes: [stickerer]
+  StickererShare:
+    type: app-extension
+    platform: iOS
+    sources: [StickererShare]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.broe.stickerer.share
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Stickerer
+    info:
+      path: StickererShare/Info.plist
+      properties:
+        CFBundleVersion: "1"
+        CFBundleShortVersionString: "1.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true

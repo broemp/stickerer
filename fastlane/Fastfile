@@ -1,0 +1,69 @@
+require "fileutils"
+require "tmpdir"
+
+default_platform(:ios)
+
+METADATA_DIR   = File.expand_path("metadata", __dir__)
+SCREENSHOT_DIR = File.expand_path("../AppStoreScreenshots/appstore-frames/output", __dir__)
+
+# App Store Connect field limits (characters).
+LIMITS = { "name" => 30, "subtitle" => 30, "promotional_text" => 170, "keywords" => 100,
+           "description" => 4000, "release_notes" => 4000 }.freeze
+
+platform :ios do
+  desc "Check the metadata files against App Store Connect's limits (offline)"
+  lane :check do
+    problems = []
+    Dir.glob(File.join(METADATA_DIR, "*/*.txt")).sort.each do |file|
+      key = File.basename(file, ".txt")
+      next unless LIMITS.key?(key)
+      length = File.read(file).chomp.length
+      problems << "#{file.sub(METADATA_DIR + '/', '')}: #{length}/#{LIMITS[key]}" if length > LIMITS[key]
+    end
+    UI.user_error!("Over the limit:\n#{problems.join("\n")}") unless problems.empty?
+    UI.success("Metadata fits App Store Connect's limits")
+  end
+
+  desc "Create the app record in App Store Connect (once). Needs FASTLANE_USER and an Apple Developer login"
+  lane :create_app do
+    produce(
+      app_name: "Stickerer",
+      language: "en-US",
+      app_version: "1.0",
+      sku: "me.broe.stickerer",
+      enable_services: {}  # no capabilities needed: share extension and URL scheme are not services
+    )
+  end
+
+  desc "Upload text metadata (name, subtitle, description, keywords, URLs, review notes). Does not submit"
+  lane :metadata do
+    check
+    deliver(
+      metadata_path: METADATA_DIR,
+      skip_screenshots: true,
+      skip_binary_upload: true,
+      force: true,
+      submit_for_review: false
+    )
+  end
+
+  desc "Upload the screenshots made by AppStoreScreenshots/make-screenshots.sh (run it first)"
+  lane :screenshots do
+    UI.user_error!("No screenshots in #{SCREENSHOT_DIR}; run AppStoreScreenshots/make-screenshots.sh") unless Dir.exist?(SCREENSHOT_DIR)
+    Dir.mktmpdir do |tmp|
+      # deliver reads <locale>/*.png and tells the device apart by resolution, so flatten.
+      Dir.glob(File.join(SCREENSHOT_DIR, "*/*/*.png")).sort.each do |f|
+        locale_dir = File.join(tmp, File.basename(File.dirname(File.dirname(f))))
+        FileUtils.mkdir_p(locale_dir)
+        FileUtils.cp(f, File.join(locale_dir, "#{File.basename(File.dirname(f))}-#{File.basename(f)}"))
+      end
+      deliver(
+        screenshots_path: tmp,
+        overwrite_screenshots: true,
+        skip_metadata: true,
+        skip_binary_upload: true,
+        force: true
+      )
+    end
+  end
+end

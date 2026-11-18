@@ -1,0 +1,105 @@
+require "fileutils"
+require "tmpdir"
+
+default_platform(:ios)
+
+# fastlane runs `sh` from fastlane/ but other actions from the project root, and __dir__ is
+# just "." inside a Fastfile, so every path has to be made absolute up front.
+FASTLANE_DIR    = [Dir.pwd, File.join(Dir.pwd, "fastlane")].find { |d| File.exist?(File.join(d, "Fastfile")) } || File.expand_path(__dir__)
+ROOT_DIR        = File.dirname(FASTLANE_DIR)
+SCREENSHOTS_DIR = File.join(FASTLANE_DIR, "screenshots")    # raw screenshots: screenshots/<locale>/
+BACKGROUND      = File.join(FASTLANE_DIR, "background.png") # outside screenshots/ so frameit doesn't try to frame it
+BACKGROUND_IPAD = File.join(FASTLANE_DIR, "background-ipad.png")
+OUTPUT_DIR      = File.join(ROOT_DIR, "output")             # final images: output/<locale>/
+RESIZE_SCRIPT   = File.join(ROOT_DIR, "apple-shots.sh")
+
+platform :ios do
+  desc "Create background.png (iPhone) and background-ipad.png that frameit puts behind the device: " \
+       "near-black green gradient with a WhatsApp-green glow and a pink glow (the app theme). Options: top:#17201B bottom:#0E1411 glow:37,211,102 glow2:255,95,162"
+  lane :background do |options|
+    top    = options[:top]    || "#17201B"
+    bottom = options[:bottom] || "#0E1411"
+    glow   = options[:glow]   || "37,211,102" # Theme.green
+    glow2  = options[:glow2]  || "255,95,162" # Theme.pink
+    { BACKGROUND => [1320, 2868], BACKGROUND_IPAD => [2048, 2732] }.each do |path, (w, h)|
+      size = (w * 1.33).round
+      sh("magick -size #{w}x#{h} 'gradient:#{top}-#{bottom}' " \
+         "\\( -size #{size}x#{size} radial-gradient:'rgba(#{glow},0.28)'-'rgba(#{glow},0)' \\) " \
+         "-gravity north -geometry +0-#{(size * 0.31).round} -composite " \
+         "\\( -size #{size}x#{size} radial-gradient:'rgba(#{glow2},0.16)'-'rgba(#{glow2},0)' \\) " \
+         "-gravity south -geometry +0-#{(size * 0.40).round} -composite " \
+         "-alpha off -define png:color-type=2 '#{path}'")
+    end
+  end
+
+  desc "Frame screenshots: device bezel + background + caption (see screenshots/Framefile.json and <locale>/title.strings)"
+  lane :frame do
+    background unless File.exist?(BACKGROUND) && File.exist?(BACKGROUND_IPAD)
+    frame_screenshots(path: SCREENSHOTS_DIR)
+  end
+
+  desc "Resize framed images to exact App Store sizes without alpha, one folder per App Store Connect slot: " \
+       "output/<locale>/iphone-6.9, iphone-6.3 (the required iPhone size) and ipad-13. " \
+       "Options: size:6.9|6.3|6.1 (only that iPhone size) mode:pad|crop|stretch bg:0x0e1411"
+  lane :export do |options|
+    # Raw iPhone screenshot width -> sizes it can be exported to (App Store Connect only scales down,
+    # so 6.3" must be uploaded separately; never upscale a smaller simulator).
+    iphone_sizes = { 1320 => %w[6.9 6.3], 1206 => %w[6.3], 1179 => %w[6.1] }
+    mode = options[:mode] || "pad"
+    bg   = options[:bg]   || "0x0e1411"
+
+    FileUtils.rm_rf(OUTPUT_DIR)
+    exported = 0
+
+    Dir.glob(File.join(SCREENSHOTS_DIR, "*/")).each do |lang_dir|
+      framed = Dir.glob(File.join(lang_dir, "*_framed.png")).sort
+      out = File.join(OUTPUT_DIR, File.basename(lang_dir))
+      # iPad shots carry an "-ipad" suffix; everything else is iPhone.
+      ipad, iphone = framed.partition { |f| File.basename(f).include?("-ipad") }
+      # Size from a captured shot, not a hand-made one (e.g. the share sheet) that may be another size.
+      sample = iphone.reject { |f| File.basename(f).include?("share") }.first || iphone.first
+      iphone_width = sample && `ffprobe -v error -show_entries stream=width -of csv=p=0 '#{sample.sub("_framed", "")}'`.to_i
+      sizes = options[:size] ? [options[:size].to_s] : iphone_sizes.fetch(iphone_width, %w[6.9 6.3])
+
+      jobs = sizes.map { |size| [iphone, size, "iphone-#{size}"] } + [[ipad, "13", "ipad-13"]]
+      jobs.each do |files, display, folder|
+        next if files.empty?
+        UI.important("#{folder}: #{files.size} screenshots, App Store Connect accepts at most 10") if files.size > 10
+        Dir.mktmpdir do |tmp|
+          # Drop the "-ipad" suffix too: the folder already says which device it is.
+          files.each { |f| FileUtils.cp(f, File.join(tmp, File.basename(f).sub("_framed", "").sub("-ipad", ""))) }
+          sh("'#{RESIZE_SCRIPT}' -s #{display} -m #{mode} -b '#{bg}' -o '#{File.join(out, folder)}' '#{tmp}'")
+          exported += files.size
+        end
+      end
+    end
+
+    UI.user_error!("No *_framed.png found in #{SCREENSHOTS_DIR}/<locale>/. Did the frame lane run?") if exported.zero?
+    UI.success("Exported #{exported} image(s) to #{OUTPUT_DIR}")
+  end
+
+  desc "Background -> frame -> export in one go. Options: size:6.9|6.3|6.1 mode:pad|crop|stretch bg:0x0e1411"
+  lane :all do |options|
+    frame
+    export(options)
+  end
+
+  desc "Upload output/<locale>/<device>/ screenshots to App Store Connect (needs an Appfile and App Store Connect credentials)"
+  lane :upload do
+    # deliver only reads output/<locale>/*.png and tells devices apart by resolution, so flatten.
+    Dir.mktmpdir do |tmp|
+      Dir.glob(File.join(OUTPUT_DIR, "*/*/*.png")).each do |f|
+        locale_dir = File.join(tmp, File.basename(File.dirname(File.dirname(f))))
+        FileUtils.mkdir_p(locale_dir)
+        FileUtils.cp(f, File.join(locale_dir, "#{File.basename(File.dirname(f))}-#{File.basename(f)}"))
+      end
+      deliver(
+        screenshots_path: tmp,
+        overwrite_screenshots: true,
+        skip_binary_upload: true,
+        skip_metadata: true,
+        force: true
+      )
+    end
+  end
+end

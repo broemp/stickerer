@@ -1,5 +1,7 @@
 node_modules
-.svelte-kit
+.DS_Store
+xcuserdata
 build
-dev.log
-static/ffmpeg
+DerivedData
+*.xcuserstate
+Stickerer.xcodeproj/

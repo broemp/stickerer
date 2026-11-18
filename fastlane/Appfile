@@ -1,0 +1,3 @@
+app_identifier("me.broe.stickerer")
+team_id("9772F73CF2")
+# apple_id: set FASTLANE_USER (or run `fastlane produce` interactively) instead of committing it.

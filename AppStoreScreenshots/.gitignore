@@ -1,0 +1,6 @@
+.build/
+appstore-frames/output/
+appstore-frames/fastlane/screenshots/*/
+appstore-frames/fastlane/report.xml
+appstore-frames/Gemfile.lock
+previews/
